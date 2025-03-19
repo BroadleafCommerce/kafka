@@ -138,14 +138,14 @@ import java.util.concurrent.atomic.AtomicReference;
  * the <code>batch.size</code> config. Making this larger can result in more batching, but requires more memory (since we will
  * generally have one of these buffers for each active partition).
  * <p>
- * By default a buffer is available to send immediately even if there is additional unused space in the buffer. However if you
- * want to reduce the number of requests you can set <code>linger.ms</code> to something greater than 0. This will
- * instruct the producer to wait up to that number of milliseconds before sending a request in hope that more records will
+ * By default, a buffer is available to send after a short delay even if there is additional unused space in the buffer.
+ * However, if you want to reduce the number of requests you can set <code>linger.ms</code> to something greater than {@code 5}.
+ * This will instruct the producer to wait up to that number of milliseconds before sending a request in hope that more records will
  * arrive to fill up the same batch. This is analogous to Nagle's algorithm in TCP. For example, in the code snippet above,
- * likely all 100 records would be sent in a single request since we set our linger time to 1 millisecond. However this setting
- * would add 1 millisecond of latency to our request waiting for more records to arrive if we didn't fill up the buffer. Note that
+ * likely all 100 records would be sent in a single request since we set our linger time to 1 millisecond. This setting
+ * would also add 1 millisecond of latency to our request waiting for more records to arrive if we didn't fill up the buffer. Note that
  * records that arrive close together in time will generally batch together even with <code>linger.ms=0</code>. So, under heavy load,
- * batching will occur regardless of the linger configuration; however setting this to something larger than 0 can lead to fewer, more
+ * batching will occur regardless of the linger configuration; however setting this to something larger can lead to fewer, more
  * efficient requests when not under maximal load at the cost of a small amount of latency.
  * <p>
  * The <code>buffer.memory</code> controls the total amount of memory available to the producer for buffering. If records
@@ -157,24 +157,19 @@ import java.util.concurrent.atomic.AtomicReference;
  * their <code>ProducerRecord</code> into bytes. You can use the included {@link org.apache.kafka.common.serialization.ByteArraySerializer} or
  * {@link org.apache.kafka.common.serialization.StringSerializer} for simple byte or string types.
  * <p>
- * From Kafka 0.11, the KafkaProducer supports two additional modes: the idempotent producer and the transactional producer.
+ * The KafkaProducer supports two additional modes: the idempotent producer (enabled by default) and the transactional producer.
  * The idempotent producer strengthens Kafka's delivery semantics from at least once to exactly once delivery. In particular
  * producer retries will no longer introduce duplicates. The transactional producer allows an application to send messages
  * to multiple partitions (and topics!) atomically.
  * </p>
  * <p>
- * From Kafka 3.0, the <code>enable.idempotence</code> configuration defaults to true. When enabling idempotence,
- * <code>retries</code> config will default to <code>Integer.MAX_VALUE</code> and the <code>acks</code> config will
- * default to <code>all</code>. There are no API changes for the idempotent producer, so existing applications will
- * not need to be modified to take advantage of this feature.
- * </p>
- * <p>
- * To take advantage of the idempotent producer, it is imperative to avoid application level re-sends since these cannot
- * be de-duplicated. As such, if an application enables idempotence, it is recommended to leave the <code>retries</code>
- * config unset, as it will be defaulted to <code>Integer.MAX_VALUE</code>. Additionally, if a {@link #send(ProducerRecord)}
- * returns an error even with infinite retries (for instance if the message expires in the buffer before being sent),
- * then it is recommended to shut down the producer and check the contents of the last produced message to ensure that
- * it is not duplicated. Finally, the producer can only guarantee idempotence for messages sent within a single session.
+ * To ensure idempotence, it is imperative to avoid application level re-sends since these cannot be de-duplicated.
+ * To achieve this, it is recommended to set {@code delivery.timeout.ms} such that retries are handled for the desired
+ * duration by the producer (the {@code retries} config should be left unset - the default is {@code Integer.MAX_VALUE}).
+ * Additionally, if a {@link #send(ProducerRecord)} returns an error even with infinite retries (for instance if the
+ * message expires in the buffer before being sent), then it is recommended to shut down the producer and check the
+ * contents of the last produced message to ensure that it is not duplicated. Finally, the producer can only guarantee
+ * idempotence for messages sent within a single session.
  * </p>
  * <p>To use the transactional producer and the attendant APIs, you must set the <code>transactional.id</code>
  * configuration property. If the <code>transactional.id</code> is set, idempotence is automatically enabled along with
@@ -234,9 +229,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * successful writes are marked as aborted, hence keeping the transactional guarantees.
  * </p>
  * <p>
- * This client can communicate with brokers that are version 0.10.0 or newer. Older or newer brokers may not support
- * certain client features.  For instance, the transactional APIs need broker versions 0.11.0 or later. You will receive an
- * <code>UnsupportedVersionException</code> when invoking an API that is not available in the running broker version.
+ * This client can communicate with brokers that are version 2.1 or newer. Older brokers may not support
+ * certain client features. For instance, {@code sendOffsetsToTransaction} with all consumer group metadata needs broker
+ * versions 2.5 or later. You will receive an <code>UnsupportedVersionException</code> when invoking an API that is not
+ * available in the running broker version.
  * </p>
  */
 public class KafkaProducer<K, V> implements Producer<K, V> {
@@ -636,8 +632,6 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * initialized, this method should no longer be used.
      *
      * @throws IllegalStateException if no {@code transactional.id} has been configured
-     * @throws org.apache.kafka.common.errors.UnsupportedVersionException fatal error indicating the broker
-     *         does not support transactions (i.e. if its version is lower than 0.11.0.0)
      * @throws org.apache.kafka.common.errors.AuthorizationException error indicating that the configured
      *         transactional.id is not authorized, or the idempotent producer id is unavailable. See the exception for
      *         more details.  User may retry this function call after fixing the permission.
@@ -665,8 +659,6 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * @throws ProducerFencedException if another producer with the same transactional.id is active
      * @throws org.apache.kafka.common.errors.InvalidProducerEpochException if the producer has attempted to produce with an old epoch
      *         to the partition leader. See the exception for more details
-     * @throws org.apache.kafka.common.errors.UnsupportedVersionException fatal error indicating the broker
-     *         does not support transactions (i.e. if its version is lower than 0.11.0.0)
      * @throws org.apache.kafka.common.errors.AuthorizationException fatal error indicating that the configured
      *         {@code transactional.id} is not authorized. See the exception for more details
      * @throws KafkaException if the producer has encountered a previous fatal error or for any other unexpected error
@@ -693,7 +685,7 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * {@link KafkaConsumer#groupMetadata()} to leverage consumer group metadata. This will provide
      * stronger fencing than just supplying the {@code consumerGroupId} and passing in {@code new ConsumerGroupMetadata(consumerGroupId)},
      * however note that the full set of consumer group metadata returned by {@link KafkaConsumer#groupMetadata()}
-     * requires the brokers to be on version 2.5 or newer to understand.
+     * requires the brokers to be on version 2.5 or newer.
      *
      * <p>
      * This method is a blocking call that waits until the request has been received and acknowledged by the consumer group
@@ -710,8 +702,7 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * @throws IllegalStateException if no transactional.id has been configured or no transaction has been started.
      * @throws ProducerFencedException fatal error indicating another producer with the same transactional.id is active
      * @throws org.apache.kafka.common.errors.UnsupportedVersionException fatal error indicating the broker
-     *         does not support transactions (i.e. if its version is lower than 0.11.0.0) or
-     *         the broker doesn't support the latest version of transactional API with all consumer group metadata
+     *         doesn't support the latest version of transactional API with all consumer group metadata
      *         (i.e. if its version is lower than 2.5.0).
      * @throws org.apache.kafka.common.errors.UnsupportedForMessageFormatException fatal error indicating the message
      *         format used for the offsets topic on the broker does not support transactions
@@ -764,8 +755,6 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      *
      * @throws IllegalStateException if no transactional.id has been configured or no transaction has been started
      * @throws ProducerFencedException fatal error indicating another producer with the same transactional.id is active
-     * @throws org.apache.kafka.common.errors.UnsupportedVersionException fatal error indicating the broker
-     *         does not support transactions (i.e. if its version is lower than 0.11.0.0)
      * @throws org.apache.kafka.common.errors.AuthorizationException fatal error indicating that the configured
      *         transactional.id is not authorized. See the exception for more details
      * @throws org.apache.kafka.common.errors.InvalidProducerEpochException if the producer has attempted to produce with an old epoch
@@ -801,8 +790,6 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
      * @throws ProducerFencedException fatal error indicating another producer with the same transactional.id is active
      * @throws org.apache.kafka.common.errors.InvalidProducerEpochException if the producer has attempted to produce with an old epoch
      *         to the partition leader. See the exception for more details
-     * @throws org.apache.kafka.common.errors.UnsupportedVersionException fatal error indicating the broker
-     *         does not support transactions (i.e. if its version is lower than 0.11.0.0)
      * @throws org.apache.kafka.common.errors.AuthorizationException fatal error indicating that the configured
      *         transactional.id is not authorized. See the exception for more details
      * @throws KafkaException if the producer has encountered a previous fatal error or for any other unexpected error

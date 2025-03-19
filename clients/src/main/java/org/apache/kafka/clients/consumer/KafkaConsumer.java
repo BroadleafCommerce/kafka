@@ -61,9 +61,9 @@ import static org.apache.kafka.common.utils.Utils.propsToMap;
  * The consumer is not thread-safe. See <a href="#multithreaded">Multi-threaded Processing</a> for more details.
  *
  * <h3>Cross-Version Compatibility</h3>
- * This client can communicate with brokers that are version 0.10.0 or newer. Older or newer brokers may not support
- * certain features. For example, 0.10.0 brokers do not support offsetsForTimes, because this feature was added
- * in version 0.10.1. You will receive an {@link org.apache.kafka.common.errors.UnsupportedVersionException}
+ * This client can communicate with brokers that are version 2.1 or newer. Older or newer brokers may not support
+ * certain features. For example, 3.9 brokers do not support {@code subscribe(SubscriptionPattern)}, because this feature was added
+ * in version 4.0. You will receive an {@link org.apache.kafka.common.errors.UnsupportedVersionException}
  * when invoking an API that is not available on the running broker version.
  * <p>
  *

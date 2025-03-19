@@ -117,7 +117,7 @@ import java.util.Set;
  *
  * <h3>Broker Compatibility</h3>
  * <p>
- * The minimum broker version required is 0.10.0.0. Methods with stricter requirements will specify the minimum broker
+ * The minimum broker version required is 2.1. Methods with stricter requirements will specify the minimum broker
  * version required.
  * <p>
  */
@@ -170,8 +170,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * This is a convenience method for {@link #createTopics(Collection, CreateTopicsOptions)} with default options.
      * See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.10.1.0 or higher.
      *
      * @param newTopics The new topics to create.
      * @return The CreateTopicsResult.
@@ -189,9 +187,6 @@ public interface Admin extends AutoCloseable {
      * success for all the brokers to become aware that the topics have been created.
      * During this time, {@link #listTopics()} and {@link #describeTopics(Collection)}
      * may not return information about the new topics.
-     * <p>
-     * This operation is supported by brokers with version 0.10.1.0 or higher. The validateOnly option is supported
-     * from version 0.10.2.0.
      *
      * @param newTopics The new topics to create.
      * @param options   The options to use when creating the new topics.
@@ -202,8 +197,6 @@ public interface Admin extends AutoCloseable {
     /**
      * This is a convenience method for {@link #deleteTopics(TopicCollection, DeleteTopicsOptions)}
      * with default options. See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.10.1.0 or higher.
      *
      * @param topics The topic names to delete.
      * @return The DeleteTopicsResult.
@@ -215,8 +208,6 @@ public interface Admin extends AutoCloseable {
     /**
      * This is a convenience method for {@link #deleteTopics(TopicCollection, DeleteTopicsOptions)}
      * with default options. See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.10.1.0 or higher.
      *
      * @param topics  The topic names to delete.
      * @param options The options to use when deleting the topics.
@@ -231,7 +222,6 @@ public interface Admin extends AutoCloseable {
      * with default options. See the overload for more details.
      * <p>
      * When using topic IDs, this operation is supported by brokers with inter-broker protocol 2.8 or higher.
-     * When using topic names, this operation is supported by brokers with version 0.10.1.0 or higher.
      *
      * @param topics The topics to delete.
      * @return The DeleteTopicsResult.
@@ -255,7 +245,6 @@ public interface Admin extends AutoCloseable {
      * return successfully in this case.
      * <p>
      * When using topic IDs, this operation is supported by brokers with inter-broker protocol 2.8 or higher.
-     * When using topic names, this operation is supported by brokers with version 0.10.1.0 or higher.
      *
      * @param topics  The topics to delete.
      * @param options The options to use when deleting the topics.
@@ -354,8 +343,6 @@ public interface Admin extends AutoCloseable {
     /**
      * This is a convenience method for {@link #describeAcls(AclBindingFilter, DescribeAclsOptions)} with
      * default options. See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param filter The filter to use.
      * @return The DescribeAclsResult.
@@ -369,8 +356,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * Note: it may take some time for changes made by {@code createAcls} or {@code deleteAcls} to be reflected
      * in the output of {@code describeAcls}.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param filter  The filter to use.
      * @param options The options to use when listing the ACLs.
@@ -381,8 +366,6 @@ public interface Admin extends AutoCloseable {
     /**
      * This is a convenience method for {@link #createAcls(Collection, CreateAclsOptions)} with
      * default options. See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param acls The ACLs to create
      * @return The CreateAclsResult.
@@ -398,8 +381,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * If you attempt to add an ACL that duplicates an existing ACL, no error will be raised, but
      * no changes will be made.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param acls    The ACLs to create
      * @param options The options to use when creating the ACLs.
@@ -410,8 +391,6 @@ public interface Admin extends AutoCloseable {
     /**
      * This is a convenience method for {@link #deleteAcls(Collection, DeleteAclsOptions)} with default options.
      * See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param filters The filters to use.
      * @return The DeleteAclsResult.
@@ -424,8 +403,6 @@ public interface Admin extends AutoCloseable {
      * Deletes access control lists (ACLs) according to the supplied filters.
      * <p>
      * This operation is not transactional so it may succeed for some ACLs while fail for others.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param filters The filters to use.
      * @param options The options to use when deleting the ACLs.
@@ -439,8 +416,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * This is a convenience method for {@link #describeConfigs(Collection, DescribeConfigsOptions)} with default options.
      * See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param resources See relevant type {@link ConfigResource.Type}
      * @return The DescribeConfigsResult
@@ -472,8 +447,6 @@ public interface Admin extends AutoCloseable {
      *     will throw a {@link org.apache.kafka.common.errors.TimeoutException} exception</li>
      *     <li>{@link ConfigResource.Type#CLIENT_METRICS}: will return empty configs</li>
      * </ul>
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param resources See relevant type {@link ConfigResource.Type}
      * @param options   The options to use when describing configs
@@ -534,8 +507,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * This is a convenience method for {@link #alterReplicaLogDirs(Map, AlterReplicaLogDirsOptions)} with default options.
      * See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 1.1.0 or higher.
      *
      * @param replicaAssignment     The replicas with their log directory absolute path
      * @return                      The AlterReplicaLogDirsResult
@@ -551,8 +522,6 @@ public interface Admin extends AutoCloseable {
      * log directory if it is not already there. For detailed result, inspect the returned {@link AlterReplicaLogDirsResult} instance.
      * <p>
      * This operation is not transactional so it may succeed for some replicas while fail for others.
-     * <p>
-     * This operation is supported by brokers with version 1.1.0 or higher.
      *
      * @param replicaAssignment     The replicas with their log directory absolute path
      * @param options               The options to use when changing replica dir
@@ -566,8 +535,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * This is a convenience method for {@link #describeLogDirs(Collection, DescribeLogDirsOptions)} with default options.
      * See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 1.0.0 or higher.
      *
      * @param brokers A list of brokers
      * @return The DescribeLogDirsResult
@@ -578,8 +545,6 @@ public interface Admin extends AutoCloseable {
 
     /**
      * Query the information of all log directories on the given set of brokers
-     * <p>
-     * This operation is supported by brokers with version 1.0.0 or higher.
      *
      * @param brokers A list of brokers
      * @param options The options to use when querying log dir info
@@ -592,8 +557,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * This is a convenience method for {@link #describeReplicaLogDirs(Collection, DescribeReplicaLogDirsOptions)}
      * with default options. See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 1.0.0 or higher.
      *
      * @param replicas The replicas to query
      * @return The DescribeReplicaLogDirsResult
@@ -604,8 +567,6 @@ public interface Admin extends AutoCloseable {
 
     /**
      * Query the replica log directory information for the specified replicas.
-     * <p>
-     * This operation is supported by brokers with version 1.0.0 or higher.
      *
      * @param replicas The replicas to query
      * @param options  The options to use when querying replica log dir info
@@ -641,8 +602,6 @@ public interface Admin extends AutoCloseable {
      * During this time, {@link #describeTopics(Collection)}
      * may not return information about the new partitions.
      * <p>
-     * This operation is supported by brokers with version 1.0.0 or higher.
-     * <p>
      * The following exceptions can be anticipated when calling {@code get()} on the futures obtained from the
      * {@link CreatePartitionsResult#values() values()} method of the returned {@link CreatePartitionsResult}
      * <ul>
@@ -674,8 +633,6 @@ public interface Admin extends AutoCloseable {
      * <p>
      * This is a convenience method for {@link #deleteRecords(Map, DeleteRecordsOptions)} with default options.
      * See the overload for more details.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param recordsToDelete The topic partitions and related offsets from which records deletion starts.
      * @return The DeleteRecordsResult.
@@ -686,8 +643,6 @@ public interface Admin extends AutoCloseable {
 
     /**
      * Delete records whose offset is smaller than the given offset of the corresponding partition.
-     * <p>
-     * This operation is supported by brokers with version 0.11.0.0 or higher.
      *
      * @param recordsToDelete The topic partitions and related offsets from which records deletion starts.
      * @param options         The options to use when deleting records.
@@ -711,8 +666,6 @@ public interface Admin extends AutoCloseable {
 
     /**
      * Create a Delegation Token.
-     * <p>
-     * This operation is supported by brokers with version 1.1.0 or higher.
      * <p>
      * The following exceptions can be anticipated when calling {@code get()} on the futures obtained from the
      * {@link CreateDelegationTokenResult#delegationToken() delegationToken()} method of the returned {@link CreateDelegationTokenResult}
@@ -748,8 +701,6 @@ public interface Admin extends AutoCloseable {
 
     /**
      * Renew a Delegation Token.
-     * <p>
-     * This operation is supported by brokers with version 1.1.0 or higher.
      * <p>
      * The following exceptions can be anticipated when calling {@code get()} on the futures obtained from the
      * {@link RenewDelegationTokenResult#expiryTimestamp() expiryTimestamp()} method of the returned {@link RenewDelegationTokenResult}
@@ -790,8 +741,6 @@ public interface Admin extends AutoCloseable {
     /**
      * Expire a Delegation Token.
      * <p>
-     * This operation is supported by brokers with version 1.1.0 or higher.
-     * <p>
      * The following exceptions can be anticipated when calling {@code get()} on the futures obtained from the
      * {@link ExpireDelegationTokenResult#expiryTimestamp() expiryTimestamp()} method of the returned {@link ExpireDelegationTokenResult}
      * <ul>
@@ -829,8 +778,6 @@ public interface Admin extends AutoCloseable {
 
     /**
      * Describe the Delegation Tokens.
-     * <p>
-     * This operation is supported by brokers with version 1.1.0 or higher.
      * <p>
      * The following exceptions can be anticipated when calling {@code get()} on the futures obtained from the
      * {@link DescribeDelegationTokenResult#delegationTokens() delegationTokens()} method of the returned {@link DescribeDelegationTokenResult}
@@ -1094,7 +1041,7 @@ public interface Admin extends AutoCloseable {
      * {@link #describeTopics(Collection)} may not return information about the partitions'
      * new leaders.
      * <p>
-     * This operation is supported by brokers with version 2.2.0 or later if preferred election is use;
+     * This operation is supported by brokers with version 2.2.0 or later if preferred election is used;
      * otherwise the brokers most be 2.4.0 or higher.
      * <p>
      * The following exceptions can be anticipated when calling {@code get()} on the future obtained
