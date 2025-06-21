@@ -45,18 +45,62 @@ else
     export TEMP_KAFKA_JVM_PERFORMANCE_OPTS="$KAFKA_JVM_PERFORMANCE_OPTS"
 fi
 
-# We will first use CDS for storage to format storage
-export KAFKA_JVM_PERFORMANCE_OPTS="${KAFKA_JVM_PERFORMANCE_OPTS-} -XX:SharedArchiveFile=/opt/kafka/storage.jsa"
+# We will use CDS for storage to format storage in KRaft mode
+if [[ -z "${KAFKA_ZOOKEEPER_CONNECT-}" ]]; then
+  export KAFKA_JVM_PERFORMANCE_OPTS="${KAFKA_JVM_PERFORMANCE_OPTS-} -XX:SharedArchiveFile=/opt/kafka/storage.jsa"
+fi
 
-echo "===> Using provided cluster id $CLUSTER_ID ..."
+# Check if we're using Zookeeper or KRaft mode
+if [[ -n "${KAFKA_ZOOKEEPER_CONNECT-}" ]]
+then
+  echo "===> Using Zookeeper mode with connection: $KAFKA_ZOOKEEPER_CONNECT"
 
-# Invoke the docker wrapper to setup property files and format storage
-result=$(/opt/kafka/bin/kafka-run-class.sh kafka.docker.KafkaDockerWrapper setup \
-      --default-configs-dir /etc/kafka/docker \
-      --mounted-configs-dir /mnt/shared/config \
-      --final-configs-dir /opt/kafka/config 2>&1) || \
-      echo $result | grep -i "already formatted" || \
-      { echo $result && (exit 1) }
+  # In Zookeeper mode, we don't need to format storage
+  # Just copy the configuration files without running the wrapper
+  echo "===> Setting up configuration files for Zookeeper mode"
+
+  # Copy default config files to final location
+  cp /etc/kafka/docker/server.properties /opt/kafka/config/server.properties
+  cp /etc/kafka/docker/log4j.properties /opt/kafka/config/log4j.properties
+  cp /etc/kafka/docker/tools-log4j.properties /opt/kafka/config/tools-log4j.properties
+
+  # Copy any user-mounted config files
+  if [ -f /mnt/shared/config/server.properties ]; then
+    cp /mnt/shared/config/server.properties /opt/kafka/config/server.properties
+  fi
+  if [ -f /mnt/shared/config/log4j.properties ]; then
+    cp /mnt/shared/config/log4j.properties /opt/kafka/config/log4j.properties
+  fi
+  if [ -f /mnt/shared/config/tools-log4j.properties ]; then
+    cp /mnt/shared/config/tools-log4j.properties /opt/kafka/config/tools-log4j.properties
+  fi
+
+  # Update zookeeper.connect in server.properties
+  sed -i "s|^zookeeper.connect=.*|zookeeper.connect=$KAFKA_ZOOKEEPER_CONNECT|g" /opt/kafka/config/server.properties
+
+  # Add any KAFKA_* environment variables to server.properties
+  export KAFKA_ENABLE_IDEMPOTENCE=false
+  for VAR in $(env)
+  do
+    if [[ $VAR =~ ^KAFKA_ && ! $VAR =~ ^KAFKA_(VERSION|HEAP_OPTS|LOG4J_OPTS|OPTS|JMX_OPTS|JVM_PERFORMANCE_OPTS|GC_LOG_OPTS|LOG4J_ROOT_LOGLEVEL|LOG4J_LOGGERS|TOOLS_LOG4J_LOGLEVEL|JMX_HOSTNAME) ]]; then
+      KAFKA_PROP_KEY=$(echo "$VAR" | sed -r 's/KAFKA_(.*)=.*/\1/g' | tr '[:upper:]' '[:lower:]' | tr '_' '.' | sed -r 's/\.\.+/_/g')
+      KAFKA_PROP_VALUE=$(echo "$VAR" | sed -r 's/.*=(.*)/\1/g')
+      echo "$KAFKA_PROP_KEY=$KAFKA_PROP_VALUE" >> /opt/kafka/config/server.properties
+    fi
+  done
+
+  /etc/kafka/docker/kafka-env-to-properties.sh /opt/kafka/config/server.properties
+else
+  echo "===> Using KRaft mode with cluster id $CLUSTER_ID ..."
+
+  # Invoke the docker wrapper to setup property files and format storage
+  result=$(/opt/kafka/bin/kafka-run-class.sh kafka.docker.KafkaDockerWrapper setup \
+        --default-configs-dir /etc/kafka/docker \
+        --mounted-configs-dir /mnt/shared/config \
+        --final-configs-dir /opt/kafka/config 2>&1) || \
+        echo $result | grep -i "already formatted" || \
+        { echo $result && (exit 1) }
+fi
 
 # Using temp env variable to get rid of storage CDS command
 export KAFKA_JVM_PERFORMANCE_OPTS="$TEMP_KAFKA_JVM_PERFORMANCE_OPTS"
@@ -64,5 +108,4 @@ export KAFKA_JVM_PERFORMANCE_OPTS="$TEMP_KAFKA_JVM_PERFORMANCE_OPTS"
 # Now we will use CDS for kafka to start kafka server
 export KAFKA_JVM_PERFORMANCE_OPTS="$KAFKA_JVM_PERFORMANCE_OPTS -XX:SharedArchiveFile=/opt/kafka/kafka.jsa"
 
-# Start kafka broker
-exec /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+exec "/opt/kafka/bin/kafka-server-start.sh" "/opt/kafka/config/server.properties"
