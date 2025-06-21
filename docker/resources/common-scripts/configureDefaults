@@ -18,6 +18,8 @@ declare -A env_defaults
 env_defaults=(
 # Replace CLUSTER_ID with a unique base64 UUID using "bin/kafka-storage.sh random-uuid"
   ["CLUSTER_ID"]="5L6g3nShT-eMCtK--X86sw"
+  # Default Zookeeper connection string - override with KAFKA_ZOOKEEPER_CONNECT env var
+  ["KAFKA_ZOOKEEPER_CONNECT"]="localhost:2181"
 )
 
 for key in "${!env_defaults[@]}"; do

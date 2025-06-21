@@ -119,3 +119,11 @@ then
     echo "KAFKA_OPTS should contain 'com.sun.management.jmxremote.rmi.port' property. It is required for accessing the JMX metrics externally."
   fi
 fi
+
+# Configure Zookeeper connection
+if [[ -n "${KAFKA_ZOOKEEPER_CONNECT-}" ]]
+then
+  echo "Configuring Zookeeper connection: $KAFKA_ZOOKEEPER_CONNECT"
+  # Update zookeeper.connect in server.properties
+  sed -i "s|^zookeeper.connect=.*|zookeeper.connect=$KAFKA_ZOOKEEPER_CONNECT|g" /opt/kafka/config/server.properties
+fi
