@@ -91,6 +91,7 @@ versions += [
   checkstyle: "8.36.2",
   commonsCli: "1.4",
   commonsIo: "2.14.0", // ZooKeeper dependency. Do not use, this is going away.
+  commonsBeanUtils: "1.11.0",
   commonsValidator: "1.7",
   dropwizardMetrics: "4.1.12.1",
   gradle: "8.10.2",
@@ -167,6 +168,7 @@ versions += [
 ]
 
 libs += [
+  commonsBeanUtils: "commons-beanutils:commons-beanutils:$versions.commonsBeanUtils",
   activation: "javax.activation:activation:$versions.activation",
   apacheda: "org.apache.directory.api:api-all:$versions.apacheda",
   apachedsCoreApi: "org.apache.directory.server:apacheds-core-api:$versions.apacheds",

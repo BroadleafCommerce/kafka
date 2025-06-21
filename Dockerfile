@@ -56,7 +56,7 @@ COPY core/build/distributions/$DISTRO_NAME.tgz /
 RUN set -eux ; \
     apk update ; \
     apk upgrade ; \
-    apk add --no-cache wget gcompat gpg gpg-agent procps bash; \
+    apk add --no-cache wget gcompat gpg gpg-agent procps bash su-exec; \
     mkdir opt/kafka; \
     tar xfz $DISTRO_NAME.tgz -C /opt/kafka --strip-components 1; \
     mkdir -p /var/lib/kafka/data /etc/kafka/secrets; \
@@ -67,7 +67,7 @@ RUN set -eux ; \
     chmod -R ug+w /etc/kafka /var/lib/kafka /etc/kafka/secrets; \
     cp /opt/kafka/config/log4j.properties /etc/kafka/docker/log4j.properties; \
     cp /opt/kafka/config/tools-log4j.properties /etc/kafka/docker/tools-log4j.properties; \
-    cp /opt/kafka/config/kraft/server.properties /etc/kafka/docker/server.properties; \
+    cp /opt/kafka/config/server.properties /etc/kafka/docker/server.properties; \
     rm $DISTRO_NAME.tgz; \
     apk del wget gpg gpg-agent; \
     apk cache clean;
@@ -77,8 +77,6 @@ COPY --from=build-jsa storage.jsa /opt/kafka/storage.jsa
 COPY --chown=appuser:appuser docker/resources/common-scripts /etc/kafka/docker
 COPY --chown=appuser:appuser docker/jvm/launch /etc/kafka/docker/launch
 
-USER appuser
-
 VOLUME ["/etc/kafka/secrets", "/var/lib/kafka/data", "/mnt/shared/config"]
 
-CMD ["/etc/kafka/docker/run"]
+CMD ["/etc/kafka/docker/hosts.sh"]

@@ -239,7 +239,9 @@ if (repo != null) {
         'clients/src/test/resources/serializedData/*',
         'docker/test/fixtures/secrets/*',
         'docker/examples/fixtures/secrets/*',
-        'docker/docker_official_images/.gitkeep'
+        'docker/docker_official_images/.gitkeep',
+        'BROADLEAF.MD',
+        'docker-bake.hcl'
     ])
   }
 } else {
@@ -918,6 +920,10 @@ project(':core') {
   }
 
   dependencies {
+    constraints {
+      // Platform declares some versions of libraries used in subprojects
+      api 'commons-beanutils:commons-beanutils:1.11.0'
+    }
     // `core` is often used in users' tests, define the following dependencies as `api` for backwards compatibility
     // even though the `core` module doesn't expose any public API
     api project(':clients')
@@ -936,6 +942,7 @@ project(':core') {
 
     implementation libs.argparse4j
     implementation libs.commonsValidator
+    implementation libs.commonsBeanUtils
     implementation libs.jacksonDatabind
     implementation libs.jacksonModuleScala
     implementation libs.jacksonDataformatCsv
