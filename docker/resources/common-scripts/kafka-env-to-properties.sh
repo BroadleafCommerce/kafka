@@ -83,10 +83,10 @@ do
     # Process only if not excluded
     if [[ $EXCLUDED == false ]]; then
       # Convert variable name: remove KAFKA_ prefix, convert to lowercase, replace _ with .
-      KAFKA_PROP_KEY=$(echo "$VAR" | sed -r 's/KAFKA_(.*)=.*/\1/g' | tr '[:upper:]' '[:lower:]' | tr '_' '.' | sed -r 's/\.\.+/_/g')
+      KAFKA_PROP_KEY=$(echo "$VAR" | sed -r 's/KAFKA_([^=]*)=.*/\1/g' | tr '[:upper:]' '[:lower:]' | tr '_' '.' | sed -r 's/\.\.+/_/g')
 
       # Extract the value
-      KAFKA_PROP_VALUE=$(echo "$VAR" | sed -r 's/.*=(.*)/\1/g')
+      KAFKA_PROP_VALUE=$(echo "$VAR" | sed -r 's/KAFKA_[^=]*=(.*)/\1/g')
 
       # Store in temporary file
       echo "$KAFKA_PROP_KEY=$KAFKA_PROP_VALUE" >> "$ENV_FILE"
@@ -139,7 +139,6 @@ while IFS= read -r LINE || [[ -n "$LINE" ]]; do
       # Replace the line with our new value
       PROP_VALUE=$(echo "$MATCH" | cut -d= -f2-)
       echo "$PROP_KEY=$PROP_VALUE" >> "$TEMP_FILE"
-      echo "Updated: $PROP_KEY=$PROP_VALUE"
       # Remove from the env file to mark as processed
       sed -i.bak "/^$PROP_KEY=/d" "$ENV_FILE"
       MODIFIED=true
@@ -164,7 +163,6 @@ while IFS= read -r LINE || [[ -n "$LINE" ]]; do
     for COMMENTED_KEY in "${COMMENTED_KEYS[@]}"; do
       if [[ "$PROP_KEY" == "$COMMENTED_KEY" ]]; then
         SKIP=true
-        echo "Skipping commented property: $PROP_KEY"
         break
       fi
     done
@@ -172,7 +170,6 @@ while IFS= read -r LINE || [[ -n "$LINE" ]]; do
     # Only add the property if it wasn't commented in the original file
     if [[ "$SKIP" == "false" ]]; then
       echo "$PROP_KEY=$PROP_VALUE" >> "$TEMP_FILE"
-      echo "Added: $PROP_KEY=$PROP_VALUE"
       MODIFIED=true
     fi
   fi
@@ -183,9 +180,3 @@ rm -f "$ENV_FILE" "$ENV_FILE.bak"
 
 # Replace the original file with the temporary file
 mv "$TEMP_FILE" "$OUTPUT_FILE"
-
-if [[ "$MODIFIED" == "true" ]]; then
-  echo "Environment variables have been written to $OUTPUT_FILE"
-else
-  echo "No changes were made to $OUTPUT_FILE"
-fi
