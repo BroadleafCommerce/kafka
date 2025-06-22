@@ -67,7 +67,6 @@ RUN set -eux ; \
     chmod -R ug+w /etc/kafka /var/lib/kafka /etc/kafka/secrets; \
     cp /opt/kafka/config/log4j.properties /etc/kafka/docker/log4j.properties; \
     cp /opt/kafka/config/tools-log4j.properties /etc/kafka/docker/tools-log4j.properties; \
-    cp /opt/kafka/config/server.properties /etc/kafka/docker/server.properties; \
     rm $DISTRO_NAME.tgz; \
     apk del wget gpg gpg-agent; \
     apk cache clean;

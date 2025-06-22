@@ -17,9 +17,6 @@
 HOSTS_FILE="/etc/hosts"
 TEMP_HOSTS_FILE="/tmp/hosts.tmp" # Writable by root in /tmp
 
-echo "Original /etc/hosts:"
-cat ${HOSTS_FILE}
-
 # Remove the IPv6 localhost entry (::1 localhost) and any other IPv6 entries for localhost
 # Ensure 127.0.0.1 localhost is present
 # We use 'grep -v' to filter out lines containing '::1 localhost'
@@ -41,7 +38,10 @@ fi
 cat "${TEMP_HOSTS_FILE}" > "${HOSTS_FILE}"
 rm "${TEMP_HOSTS_FILE}"
 
-echo "Modified /etc/hosts:"
-cat ${HOSTS_FILE}
+if [[ -n "${KAFKA_ZOOKEEPER_CONNECT-}" ]] then
+  cp /opt/kafka/config/server.properties /etc/kafka/docker/server.properties;
+else
+  cp /opt/kafka/config/kraft/server.properties /etc/kafka/docker/server.properties;
+fi
 
 exec su-exec appuser /etc/kafka/docker/run
