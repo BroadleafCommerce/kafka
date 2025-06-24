@@ -37,11 +37,3 @@ fi
 # This requires root privileges, which the entrypoint has.
 cat "${TEMP_HOSTS_FILE}" > "${HOSTS_FILE}"
 rm "${TEMP_HOSTS_FILE}"
-
-if [[ -n "${KAFKA_ZOOKEEPER_CONNECT-}" ]] then
-  cp /opt/kafka/config/server.properties /etc/kafka/docker/server.properties;
-else
-  cp /opt/kafka/config/kraft/server.properties /etc/kafka/docker/server.properties;
-fi
-
-exec su-exec appuser /etc/kafka/docker/run

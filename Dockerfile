@@ -78,4 +78,13 @@ COPY --chown=appuser:appuser docker/jvm/launch /etc/kafka/docker/launch
 
 VOLUME ["/etc/kafka/secrets", "/var/lib/kafka/data", "/mnt/shared/config"]
 
-CMD ["/etc/kafka/docker/hosts.sh"]
+RUN /etc/kafka/docker/hosts.sh
+
+RUN mkdir /etc/confluent
+RUN mkdir /etc/confluent/docker
+COPY --chown=appuser:root run.sh /etc/confluent/docker/run
+RUN chmod 755 /etc/confluent/docker/run
+
+USER appuser
+
+CMD ["/etc/confluent/docker/run"]
