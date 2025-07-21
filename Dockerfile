@@ -16,6 +16,8 @@
 # limitations under the License.
 ###############################################################################
 
+# Stage 1: Build Java Shared Archive (JSA)
+# Adapted from the official Apache Dockerfile
 FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22 AS build-jsa
 
 USER root
@@ -36,7 +38,67 @@ RUN set -eux ; \
 # Generate jsa files using dynamic CDS for kafka server start command and kafka storage format command
 RUN /etc/kafka/docker/jsa_launch
 
+# Stage 2: Extract Strimzi components from the official Strimzi Kafka image
+# IMPORTANT: When updating Kafka - review Strimzi and Kafka compatibility matrix 
+# to ensure appropriate strimzi source and image versions: https://strimzi.io/downloads/
+FROM quay.io/strimzi/kafka:0.47.0-kafka-3.9.1 AS strimzi-source-extractor
 
+USER root
+
+ARG STRIMZI_VERSION=0.47.0
+
+# Create directories to copy content out
+RUN mkdir -p /tmp/strimzi-extracted/scripts \
+             /tmp/strimzi-extracted/kafka-exporter \
+             /tmp/strimzi-extracted/prometheus-jmx-exporter \
+             /tmp/strimzi-extracted/kafka-libs \
+             /tmp/strimzi-extracted/cruise-control \
+             /tmp/strimzi-extracted/usr-bin             
+
+#####
+# Add Kafka
+# Strimzi Step 1: Copy Strimzi Kafka scripts (e.g., kafka_run.sh) directly from source
+# Download and extract the Strimzi Kafka Operator tar file 
+#####
+RUN curl -L https://github.com/strimzi/strimzi-kafka-operator/archive/$STRIMZI_VERSION.tar.gz -o strimzi-kafka-operator.tar.gz && \
+    tar -xzf strimzi-kafka-operator.tar.gz && \
+    mv strimzi-kafka-operator-$STRIMZI_VERSION strimzi-kafka-operator
+
+# Copy the required directories to the current working directory
+RUN cp -r strimzi-kafka-operator/docker-images/kafka-based/kafka/scripts /tmp/strimzi-extracted/scripts
+
+#####
+# Add Kafka Exporter
+# Strimzi Step 2: Copy Kafka Exporter Scripts from base image
+#####
+RUN cp -r /opt/kafka-exporter/* /tmp/strimzi-extracted/kafka-exporter
+
+#####
+# Add Prometheus JMX Exporter
+# Strimzi Step 3: Copy Prometheus JMX Exporter contents from base image
+#####
+RUN cp -r /opt/prometheus-jmx-exporter/* /tmp/strimzi-extracted/prometheus-jmx-exporter
+
+#####
+# Add Strimzi agents, 3rd party libs, & Other Kafka Libs
+# Strimzi Step 4: Copy Strimzi Agents and other libraries from Kafka's libs directory in the base image
+#####
+RUN cp -r /opt/kafka/libs/* /tmp/strimzi-extracted/kafka-libs
+
+#####
+# Add Cruise Control
+# Strimzi Step 5: Copy Cruise Control libraries and scripts
+#####
+RUN cp -r /opt/cruise-control/* /tmp/strimzi-extracted/cruise-control
+
+# Clean up downloaded files to reduce image size
+RUN rm -rf strimzi-kafka-operator.tar.gz strimzi-kafka-operator
+
+# Verify the files were copied
+RUN ls -la /tmp/strimzi-extracted/scripts /tmp/strimzi-extracted/kafka-exporter /tmp/strimzi-extracted/prometheus-jmx-exporter /tmp/strimzi-extracted/kafka-libs /tmp/strimzi-extracted/cruise-control
+
+# Stage 3: Main Kafka image build
+# Adapted from the official Apache Dockerfile
 FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22
 
 # exposed ports
@@ -60,7 +122,7 @@ COPY core/build/distributions/$DISTRO_NAME.tgz /
 RUN set -eux ; \
     apk update ; \
     apk upgrade ; \
-    apk add --no-cache wget gcompat gpg gpg-agent procps bash su-exec; \
+    apk add --no-cache wget gcompat gpg gpg-agent procps bash su-exec tini grep curl; \
     mkdir opt/kafka; \
     tar xfz $DISTRO_NAME.tgz -C /opt/kafka --strip-components 1; \
     mkdir -p /var/lib/kafka/data /etc/kafka/secrets; \
@@ -75,6 +137,12 @@ RUN set -eux ; \
     apk del wget gpg gpg-agent; \
     apk cache clean;
 
+#####
+# Adapted Entrypoint in order to support 
+# backwared-compatible BLC installations that may have been referencing
+# a Confluent-based Kafka Image, with added support for initialization 
+# via the Strimzi Operator for K8 installations (https://strimzi.io/)
+#####    
 COPY --from=build-jsa kafka.jsa /opt/kafka/kafka.jsa
 COPY --from=build-jsa storage.jsa /opt/kafka/storage.jsa
 COPY --chown=appuser:0 docker/resources/common-scripts /etc/kafka/docker
@@ -88,6 +156,53 @@ RUN mkdir /etc/confluent
 RUN mkdir /etc/confluent/docker
 COPY --chown=appuser:0 run.sh /etc/confluent/docker/run
 RUN chmod 755 /etc/confluent/docker/run
+
+# --- Start of Strimzi Support ---
+
+ENV KAFKA_HOME=/opt/kafka
+ENV KAFKA_VERSION=3.9.1
+ENV STRIMZI_VERSION=0.47.0
+ENV KAFKA_EXPORTER_HOME=/opt/kafka-exporter
+ENV JMX_EXPORTER_HOME=/opt/prometheus-jmx-exporter
+ENV CRUISE_CONTROL_HOME=/opt/cruise-control
+
+# Create a symlink to tini in /usr/bin as referenced by strimzi scripts
+RUN ln -s /sbin/tini /usr/bin/tini
+
+# Create necessary directories for Strimzi components
+RUN mkdir -p ${KAFKA_HOME}/strimzi-scripts \
+             ${KAFKA_HOME}/strimzi-kafka-libs \
+             ${KAFKA_EXPORTER_HOME} \
+             ${CRUISE_CONTROL_HOME} \
+             ${JMX_EXPORTER_HOME}
+
+# Copy Strimzi Kafka scripts
+COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/scripts ${KAFKA_HOME}/strimzi-scripts
+RUN chmod -R +x ${KAFKA_HOME}/strimzi-scripts
+RUN mv ${KAFKA_HOME}/strimzi-scripts/scripts/* ${KAFKA_HOME}
+RUN rm -rf ${KAFKA_HOME}/strimzi-scripts
+
+# Copy Kafka Exporter directory
+COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/kafka-exporter ${KAFKA_EXPORTER_HOME}
+RUN chmod -R +x ${KAFKA_EXPORTER_HOME}/kafka_exporter
+
+# Copy Prometheus JMX Exporter directory
+COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/prometheus-jmx-exporter ${JMX_EXPORTER_HOME}
+
+# Copy Strimzi Agents and other Kafka libraries
+COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/kafka-libs/ ${KAFKA_HOME}/strimzi-kafka-libs/
+# Copy from strimzi temp directory into main kafka lib, skip files if they already exist
+RUN cp -n ${KAFKA_HOME}/strimzi-kafka-libs/* ${KAFKA_HOME}/libs
+RUN rm -rf ${KAFKA_HOME}/strimzi-kafka-libs
+
+# Copy Cruise Control libraries
+COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/cruise-control/ ${CRUISE_CONTROL_HOME}
+RUN chmod -R +x ${CRUISE_CONTROL_HOME} || true
+
+# Important to set this to the kafka home as strimzi scripts have relative path references
+WORKDIR $KAFKA_HOME
+
+# --- End of Strimzi Support ---
 
 # For compatibility with standard Kubernetes, we explicitly switch to a non-root UID. OpenShift
 # will ignore these settings and run as an arbitrary UID in the root group.
