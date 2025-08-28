@@ -68,10 +68,11 @@ RUN curl -L https://github.com/strimzi/strimzi-kafka-operator/archive/$STRIMZI_V
 RUN cp -r strimzi-kafka-operator/docker-images/kafka-based/kafka/scripts /tmp/strimzi-extracted/scripts
 
 #####
-# Add Kafka Exporter
-# Strimzi Step 2: Copy Kafka Exporter Scripts from base image
+# Exclude Kafka Exporter
+# Strimzi Step 2: Strimzi comes with Kafka Exporter Scripts from base image
+# However due to more strict security policies, we are opting to exclude this go-based dependency
+# RUN cp -r /opt/kafka-exporter/* /tmp/strimzi-extracted/kafka-exporter
 #####
-RUN cp -r /opt/kafka-exporter/* /tmp/strimzi-extracted/kafka-exporter
 
 #####
 # Add Prometheus JMX Exporter
@@ -182,9 +183,10 @@ RUN chmod -R +x ${KAFKA_HOME}/strimzi-scripts
 RUN mv ${KAFKA_HOME}/strimzi-scripts/scripts/* ${KAFKA_HOME}
 RUN rm -rf ${KAFKA_HOME}/strimzi-scripts
 
-# Copy Kafka Exporter directory
-COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/kafka-exporter ${KAFKA_EXPORTER_HOME}
-RUN chmod -R +x ${KAFKA_EXPORTER_HOME}/kafka_exporter
+# Do Nothing with Kafka Exporter Directory
+# As mentioned above, due to stricter security policies we are opting to exclude the kafka-exporter binary
+# COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/kafka-exporter ${KAFKA_EXPORTER_HOME}
+# RUN chmod -R +x ${KAFKA_EXPORTER_HOME}/kafka_exporter
 
 # Copy Prometheus JMX Exporter directory
 COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/prometheus-jmx-exporter ${JMX_EXPORTER_HOME}
