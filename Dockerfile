@@ -16,7 +16,7 @@
 # limitations under the License.
 ###############################################################################
 
-FROM eclipse-temurin:21-jre-alpine AS build-jsa
+FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22 AS build-jsa
 
 USER root
 
@@ -37,7 +37,7 @@ RUN set -eux ; \
 RUN /etc/kafka/docker/jsa_launch
 
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22
 
 # exposed ports
 EXPOSE 9092
