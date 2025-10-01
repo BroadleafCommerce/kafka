@@ -45,8 +45,6 @@ FROM quay.io/strimzi/kafka:0.47.0-kafka-3.9.1 AS strimzi-source-extractor
 
 USER root
 
-ARG STRIMZI_VERSION=0.47.0
-
 # Create directories to copy content out
 RUN mkdir -p /tmp/strimzi-extracted/scripts \
              /tmp/strimzi-extracted/kafka-exporter \
@@ -56,16 +54,12 @@ RUN mkdir -p /tmp/strimzi-extracted/scripts \
              /tmp/strimzi-extracted/usr-bin             
 
 #####
-# Add Kafka
-# Strimzi Step 1: Copy Strimzi Kafka scripts (e.g., kafka_run.sh) directly from source
-# Download and extract the Strimzi Kafka Operator tar file 
+# Add Kafka Scripts
+# Strimzi Step 1: Copy Strimzi Kafka scripts (e.g., kafka_run.sh) from base image
+# Exclude non-strimzi scripts (i.e we only need ones defined here https://github.com/strimzi/strimzi-kafka-operator/tree/0.47.0/docker-images/kafka-based/kafka/scripts)
 #####
-RUN curl -L https://github.com/strimzi/strimzi-kafka-operator/archive/$STRIMZI_VERSION.tar.gz -o strimzi-kafka-operator.tar.gz && \
-    tar -xzf strimzi-kafka-operator.tar.gz && \
-    mv strimzi-kafka-operator-$STRIMZI_VERSION strimzi-kafka-operator
-
-# Copy the required directories to the current working directory
-RUN cp -r strimzi-kafka-operator/docker-images/kafka-based/kafka/scripts /tmp/strimzi-extracted/scripts
+RUN cp -r /opt/kafka/* /tmp/strimzi-extracted/scripts
+RUN rm -rf /tmp/strimzi-extracted/scripts/LICENSE /tmp/strimzi-extracted/scripts/NOTICE /tmp/strimzi-extracted/scripts/bin /tmp/strimzi-extracted/scripts/config /tmp/strimzi-extracted/scripts/libs /tmp/strimzi-extracted/scripts/licenses /tmp/strimzi-extracted/scripts/plugins /tmp/strimzi-extracted/scripts/site-docs
 
 #####
 # Exclude Kafka Exporter
@@ -91,9 +85,6 @@ RUN cp -r /opt/kafka/libs/* /tmp/strimzi-extracted/kafka-libs
 # Strimzi Step 5: Copy Cruise Control libraries and scripts
 #####
 RUN cp -r /opt/cruise-control/* /tmp/strimzi-extracted/cruise-control
-
-# Clean up downloaded files to reduce image size
-RUN rm -rf strimzi-kafka-operator.tar.gz strimzi-kafka-operator
 
 # Verify the files were copied
 RUN ls -la /tmp/strimzi-extracted/scripts /tmp/strimzi-extracted/kafka-exporter /tmp/strimzi-extracted/prometheus-jmx-exporter /tmp/strimzi-extracted/kafka-libs /tmp/strimzi-extracted/cruise-control
@@ -139,7 +130,7 @@ RUN set -eux ; \
     apk cache clean;
 
 #####
-# Adapted Entrypoint in order to support 
+# Needed to support an adapted entrypoint in support of
 # backwared-compatible BLC installations that may have been referencing
 # a Confluent-based Kafka Image, with added support for initialization 
 # via the Strimzi Operator for K8 installations (https://strimzi.io/)
@@ -180,7 +171,7 @@ RUN mkdir -p ${KAFKA_HOME}/strimzi-scripts \
 # Copy Strimzi Kafka scripts
 COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/scripts ${KAFKA_HOME}/strimzi-scripts
 RUN chmod -R +x ${KAFKA_HOME}/strimzi-scripts
-RUN mv ${KAFKA_HOME}/strimzi-scripts/scripts/* ${KAFKA_HOME}
+RUN mv ${KAFKA_HOME}/strimzi-scripts/* ${KAFKA_HOME}
 RUN rm -rf ${KAFKA_HOME}/strimzi-scripts
 
 # Do Nothing with Kafka Exporter Directory
@@ -210,4 +201,11 @@ WORKDIR $KAFKA_HOME
 # will ignore these settings and run as an arbitrary UID in the root group.
 USER appuser
 
+#####
+# Adapted Entrypoint in order to support 
+# backwared-compatible BLC installations that may have been referencing
+# a Confluent-based Kafka Image. Note that this entrypoint is not used
+# when running this image via the Strimzi Operator as Strimzi
+# provides its own entrypoint. See https://github.com/strimzi/strimzi-kafka-operator
+#####
 CMD ["/etc/confluent/docker/run"]
