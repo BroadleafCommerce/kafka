@@ -53,6 +53,10 @@ ARG DISTRO_NAME=kafka_2.13-3.9.1
 
 COPY core/build/distributions/$DISTRO_NAME.tgz /
 
+# NOTE - because we aim to be compatible with both OpenShift (runs as random UID) and standard
+# Kubernetes, we cannot have any user-specific configuration in our Dockerfile.
+# We assume appuser UID for standard Kubernetes, and an arbitrary UID + root group (0)
+# for OpenShift. Thus, grant both of those ownership here.
 RUN set -eux ; \
     apk update ; \
     apk upgrade ; \
@@ -62,8 +66,8 @@ RUN set -eux ; \
     mkdir -p /var/lib/kafka/data /etc/kafka/secrets; \
     mkdir -p /etc/kafka/docker /usr/logs /mnt/shared/config; \
     adduser -h /home/appuser -D --shell /bin/bash appuser; \
-    chown appuser:appuser -R /usr/logs /opt/kafka /mnt/shared/config; \
-    chown appuser:root -R /var/lib/kafka /etc/kafka/secrets /etc/kafka; \
+    chown appuser:0 -R /usr/logs /opt/kafka /mnt/shared/config; \
+    chown appuser:0 -R /var/lib/kafka /etc/kafka/secrets /etc/kafka; \
     chmod -R ug+w /etc/kafka /var/lib/kafka /etc/kafka/secrets; \
     cp /opt/kafka/config/log4j.properties /etc/kafka/docker/log4j.properties; \
     cp /opt/kafka/config/tools-log4j.properties /etc/kafka/docker/tools-log4j.properties; \
@@ -73,8 +77,8 @@ RUN set -eux ; \
 
 COPY --from=build-jsa kafka.jsa /opt/kafka/kafka.jsa
 COPY --from=build-jsa storage.jsa /opt/kafka/storage.jsa
-COPY --chown=appuser:appuser docker/resources/common-scripts /etc/kafka/docker
-COPY --chown=appuser:appuser docker/jvm/launch /etc/kafka/docker/launch
+COPY --chown=appuser:0 docker/resources/common-scripts /etc/kafka/docker
+COPY --chown=appuser:0 docker/jvm/launch /etc/kafka/docker/launch
 
 VOLUME ["/etc/kafka/secrets", "/var/lib/kafka/data", "/mnt/shared/config"]
 
@@ -82,9 +86,11 @@ RUN /etc/kafka/docker/hosts.sh
 
 RUN mkdir /etc/confluent
 RUN mkdir /etc/confluent/docker
-COPY --chown=appuser:root run.sh /etc/confluent/docker/run
+COPY --chown=appuser:0 run.sh /etc/confluent/docker/run
 RUN chmod 755 /etc/confluent/docker/run
 
+# For compatibility with standard Kubernetes, we explicitly switch to a non-root UID. OpenShift
+# will ignore these settings and run as an arbitrary UID in the root group.
 USER appuser
 
 CMD ["/etc/confluent/docker/run"]
