@@ -68,7 +68,7 @@ RUN set -eux ; \
     adduser -h /home/appuser -D --shell /bin/bash appuser; \
     chown appuser:0 -R /usr/logs /opt/kafka /mnt/shared/config; \
     chown appuser:0 -R /var/lib/kafka /etc/kafka/secrets /etc/kafka; \
-    chmod -R ug+w /etc/kafka /var/lib/kafka /etc/kafka/secrets; \
+    chmod -R ug+w /etc/kafka /var/lib/kafka /etc/kafka/secrets /opt/kafka; \
     cp /opt/kafka/config/log4j.properties /etc/kafka/docker/log4j.properties; \
     cp /opt/kafka/config/tools-log4j.properties /etc/kafka/docker/tools-log4j.properties; \
     rm $DISTRO_NAME.tgz; \
