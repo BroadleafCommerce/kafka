@@ -16,7 +16,7 @@
 # limitations under the License.
 ###############################################################################
 
-FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22 AS build-jsa
+FROM eclipse-temurin:21.0.9_10-jre-alpine-3.23 AS build-jsa
 
 USER root
 
