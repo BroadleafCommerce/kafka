@@ -37,7 +37,7 @@ RUN set -eux ; \
 RUN /etc/kafka/docker/jsa_launch
 
 
-FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22
+FROM eclipse-temurin:21.0.9_10-jre-alpine-3.23
 
 # exposed ports
 EXPOSE 9092
