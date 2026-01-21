@@ -18,7 +18,7 @@
 
 # Stage 1: Build Java Shared Archive (JSA)
 # Adapted from the official Apache Dockerfile
-FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22 AS build-jsa
+FROM eclipse-temurin:21.0.9_10-jre-alpine-3.23 AS build-jsa
 
 USER root
 
@@ -91,7 +91,7 @@ RUN ls -la /tmp/strimzi-extracted/scripts /tmp/strimzi-extracted/kafka-exporter 
 
 # Stage 3: Main Kafka image build
 # Adapted from the official Apache Dockerfile
-FROM eclipse-temurin:21.0.8_9-jre-alpine-3.22
+FROM eclipse-temurin:21.0.9_10-jre-alpine-3.23
 
 # exposed ports
 EXPOSE 9092
@@ -138,6 +138,7 @@ RUN set -eux ; \
 COPY --from=build-jsa kafka.jsa /opt/kafka/kafka.jsa
 COPY --from=build-jsa storage.jsa /opt/kafka/storage.jsa
 COPY --chown=appuser:0 docker/resources/common-scripts /etc/kafka/docker
+RUN chmod +x /etc/kafka/docker/copy-jars.sh
 COPY --chown=appuser:0 docker/jvm/launch /etc/kafka/docker/launch
 
 VOLUME ["/etc/kafka/secrets", "/var/lib/kafka/data", "/mnt/shared/config"]
@@ -183,14 +184,19 @@ RUN rm -rf ${KAFKA_HOME}/strimzi-scripts
 COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/prometheus-jmx-exporter ${JMX_EXPORTER_HOME}
 
 # Copy Strimzi Agents and other Kafka libraries
-COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/kafka-libs/ ${KAFKA_HOME}/strimzi-kafka-libs/
-# Copy from strimzi temp directory into main kafka lib, skip files if they already exist
-RUN cp -n ${KAFKA_HOME}/strimzi-kafka-libs/* ${KAFKA_HOME}/libs
-RUN rm -rf ${KAFKA_HOME}/strimzi-kafka-libs
+# Use a bind mount to access files from the previous stage without copying them permanently into a layer first
+RUN --mount=type=bind,from=strimzi-source-extractor,source=/tmp/strimzi-extracted/kafka-libs,target=/tmp/strimzi-kafka-libs-source \
+    /etc/kafka/docker/copy-jars.sh /tmp/strimzi-kafka-libs-source ${KAFKA_HOME}/libs && \
+    chown -R appuser:root ${KAFKA_HOME}/libs
 
 # Copy Cruise Control libraries
-COPY --from=strimzi-source-extractor --chown=appuser:root /tmp/strimzi-extracted/cruise-control/ ${CRUISE_CONTROL_HOME}
-RUN chmod -R +x ${CRUISE_CONTROL_HOME} || true
+# Use a bind mount to access files from the previous stage
+# We copy libs using the deduplication script, and other files directly
+RUN --mount=type=bind,from=strimzi-source-extractor,source=/tmp/strimzi-extracted/cruise-control,target=/tmp/cruise-control-source \
+    bash -c '/etc/kafka/docker/copy-jars.sh /tmp/cruise-control-source/libs ${CRUISE_CONTROL_HOME}/libs ${KAFKA_HOME}/libs && \
+    find /tmp/cruise-control-source -maxdepth 1 -mindepth 1 -not -name libs -exec cp -r {} ${CRUISE_CONTROL_HOME}/ \;' && \
+    chown -R appuser:root ${CRUISE_CONTROL_HOME} && \
+    chmod -R +x ${CRUISE_CONTROL_HOME}
 
 # Important to set this to the kafka home as strimzi scripts have relative path references
 WORKDIR $KAFKA_HOME
