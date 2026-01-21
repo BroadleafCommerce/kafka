@@ -161,6 +161,8 @@ allprojects {
           // ZooKeeper (potentially older and containing CVEs)
           libs.nettyHandler,
           libs.nettyTransportNativeEpoll,
+          libs.nettyCodecHttp,
+          libs.nettyCodecHttp2,
           // be explicit about the reload4j version instead of relying on the transitive versions
           libs.reload4j,
           libs.commonsLang
@@ -1006,6 +1008,16 @@ project(':core') {
     }
     // ZooKeeperMain depends on commons-cli but declares the dependency as `provided`
     implementation libs.commonsCli
+
+    // Strimzi and cruise control deps
+    // Overridden for CVEs
+    implementation libs.nettyCodecHttp
+    implementation libs.nettyCodecHttp2
+    implementation libs.nimbusJoseJwt
+    implementation libs.log4J
+    implementation libs.vertxCore
+    implementation libs.vertxWeb
+    // End Strimzi and cruise control deps
 
     compileOnly libs.reload4j
 

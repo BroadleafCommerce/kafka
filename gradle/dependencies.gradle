@@ -145,7 +145,7 @@ versions += [
   lz4: "1.10.1",
   mavenArtifact: "3.9.6",
   metrics: "2.2.0",
-  netty: "4.1.125.Final",
+  netty: "4.1.130.Final",
   opentelemetryProto: "1.0.0-alpha",
   protobuf: "3.25.5", // a dependency of opentelemetryProto
   pcollections: "4.0.1",
@@ -167,7 +167,10 @@ versions += [
   // When updating the zstd version, please do as well in docker/native/native-image-configs/resource-config.json
   // Also make sure the compression levels in org.apache.kafka.common.record.CompressionType are still valid
   zstd: "1.5.6-4",
-  junitPlatform: "1.10.2"
+  junitPlatform: "1.10.2",
+  nimbusJoseJwt: "9.37.4",
+  log4J: "2.25.3",
+  vertx: "4.5.24"
 ]
 
 libs += [
@@ -250,6 +253,8 @@ libs += [
   mockitoJunitJupiter: "org.mockito:mockito-junit-jupiter:$mockitoVersion",
   nettyHandler: "io.netty:netty-handler:$versions.netty",
   nettyTransportNativeEpoll: "io.netty:netty-transport-native-epoll:$versions.netty",
+  nettyCodecHttp: "io.netty:netty-codec-http:$versions.netty",
+  nettyCodecHttp2: "io.netty:netty-codec-http2:$versions.netty",
   pcollections: "org.pcollections:pcollections:$versions.pcollections",
   opentelemetryProto: "io.opentelemetry.proto:opentelemetry-proto:$versions.opentelemetryProto",
   protobuf: "com.google.protobuf:protobuf-java:$versions.protobuf",
@@ -270,5 +275,9 @@ libs += [
   jfreechart: "jfreechart:jfreechart:$versions.jfreechart",
   mavenArtifact: "org.apache.maven:maven-artifact:$versions.mavenArtifact",
   zstd: "com.github.luben:zstd-jni:$versions.zstd",
-  httpclient: "org.apache.httpcomponents:httpclient:$versions.httpclient"
+  httpclient: "org.apache.httpcomponents:httpclient:$versions.httpclient",
+  nimbusJoseJwt: "com.nimbusds:nimbus-jose-jwt:$versions.nimbusJoseJwt",
+  log4J: "org.apache.logging.log4j:log4j-core:$versions.log4J",
+  vertxCore: "io.vertx:vertx-core:$versions.vertx",
+  vertxWeb: "io.vertx:vertx-web:$versions.vertx"
 ]
