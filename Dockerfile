@@ -29,8 +29,15 @@ ARG DISTRO_NAME=kafka_2.13-3.9.1
 COPY core/build/distributions/$DISTRO_NAME.tgz /
 
 RUN set -eux ; \
+    # 1. Add Alpine Edge repositories
+    echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories; \
+    echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories; \
+    # 2. Update and upgrade apk-tools
     apk update ; \
-    apk upgrade ; \
+    apk add --upgrade apk-tools; \
+    # 3. Force upgrade to Edge versions
+    apk upgrade --available ; \
+    # 4. Install build dependencies (wget, gcompat, etc.)
     apk add --no-cache wget gcompat gpg gpg-agent procps bash; \
     mkdir opt/kafka; \
     tar xfz $DISTRO_NAME.tgz -C /opt/kafka --strip-components 1;
@@ -112,9 +119,17 @@ COPY core/build/distributions/$DISTRO_NAME.tgz /
 # We assume appuser UID for standard Kubernetes, and an arbitrary UID + root group (0)
 # for OpenShift. Thus, grant both of those ownership here.
 RUN set -eux ; \
+    # 1. Add Alpine Edge repositories
+    echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories; \
+    echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories; \
+    # 2. Update and upgrade apk-tools
     apk update ; \
-    apk upgrade ; \
+    apk add --upgrade apk-tools; \
+    # 3. Force upgrade all OS packages to Edge versions (patches CVEs)
+    apk upgrade --available ; \
+    # 4. Install runtime dependencies
     apk add --no-cache wget gcompat gpg gpg-agent procps bash su-exec tini grep curl; \
+    # 5. Continue with Kafka installation and configuration
     mkdir opt/kafka; \
     tar xfz $DISTRO_NAME.tgz -C /opt/kafka --strip-components 1; \
     mkdir -p /var/lib/kafka/data /etc/kafka/secrets; \
@@ -126,6 +141,7 @@ RUN set -eux ; \
     cp /opt/kafka/config/log4j.properties /etc/kafka/docker/log4j.properties; \
     cp /opt/kafka/config/tools-log4j.properties /etc/kafka/docker/tools-log4j.properties; \
     rm $DISTRO_NAME.tgz; \
+    # 6. Cleanup (remove build-only tools if desired, though gpg/wget were just installed above)
     apk del wget gpg gpg-agent; \
     apk cache clean;
 
