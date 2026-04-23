@@ -24,7 +24,7 @@ USER root
 
 COPY docker/jvm/jsa_launch /etc/kafka/docker/jsa_launch
 
-ARG DISTRO_NAME=kafka_2.13-3.9.1
+ARG DISTRO_NAME=kafka_2.13-3.9.2
 
 COPY core/build/distributions/$DISTRO_NAME.tgz /
 
@@ -48,7 +48,7 @@ RUN /etc/kafka/docker/jsa_launch
 # Stage 2: Extract Strimzi components from the official Strimzi Kafka image
 # IMPORTANT: When updating Kafka - review Strimzi and Kafka compatibility matrix 
 # to ensure appropriate strimzi source and image versions: https://strimzi.io/downloads/
-FROM quay.io/strimzi/kafka:0.47.0-kafka-3.9.1 AS strimzi-source-extractor
+FROM quay.io/strimzi/kafka:0.47.0-kafka-3.9.2 AS strimzi-source-extractor
 
 USER root
 
@@ -110,7 +110,7 @@ LABEL org.label-schema.name="kafka" \
       org.label-schema.vcs-url="https://github.com/apache/kafka" \
       maintainer="Apache Kafka"
 
-ARG DISTRO_NAME=kafka_2.13-3.9.1
+ARG DISTRO_NAME=kafka_2.13-3.9.2
 
 COPY core/build/distributions/$DISTRO_NAME.tgz /
 
@@ -169,7 +169,7 @@ RUN chmod 755 /etc/confluent/docker/run
 # --- Start of Strimzi Support ---
 
 ENV KAFKA_HOME=/opt/kafka
-ENV KAFKA_VERSION=3.9.1
+ENV KAFKA_VERSION=3.9.2
 ENV STRIMZI_VERSION=0.47.0
 ENV KAFKA_EXPORTER_HOME=/opt/kafka-exporter
 ENV JMX_EXPORTER_HOME=/opt/prometheus-jmx-exporter
