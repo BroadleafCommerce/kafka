@@ -16,35 +16,26 @@
 # limitations under the License.
 ###############################################################################
 
-FROM eclipse-temurin:21.0.9_10-jre-alpine-3.23 AS build-jsa
+# Stage 1: Build Java Shared Archive (JSA)
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-1 AS build-jsa
 
 USER root
 
 COPY docker/jvm/jsa_launch /etc/kafka/docker/jsa_launch
 
-ARG DISTRO_NAME=kafka_2.13-3.9.1
+ARG DISTRO_NAME=kafka_2.13-3.9.2
 
 COPY core/build/distributions/$DISTRO_NAME.tgz /
 
 RUN set -eux ; \
-    # 1. Add Alpine Edge repositories
-    echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories; \
-    echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories; \
-    # 2. Update and upgrade apk-tools
-    apk update ; \
-    apk add --upgrade apk-tools; \
-    # 3. Force upgrade to Edge versions
-    apk upgrade --available ; \
-    # 4. Install build dependencies
-    apk add --no-cache wget gcompat gpg gpg-agent procps bash; \
-    mkdir opt/kafka; \
-    tar xfz $DISTRO_NAME.tgz -C /opt/kafka --strip-components 1;
+    tar xfz /$DISTRO_NAME.tgz -C /opt/kafka --strip-components 1;
 
 # Generate jsa files using dynamic CDS for kafka server start command and kafka storage format command
+WORKDIR /
 RUN /etc/kafka/docker/jsa_launch
 
-
-FROM eclipse-temurin:21.0.9_10-jre-alpine-3.23
+# Stage 2: Main Kafka image build
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-1
 
 # exposed ports
 EXPOSE 9092
@@ -56,7 +47,7 @@ LABEL org.label-schema.name="kafka" \
       org.label-schema.vcs-url="https://github.com/apache/kafka" \
       maintainer="Apache Kafka"
 
-ARG DISTRO_NAME=kafka_2.13-3.9.1
+ARG DISTRO_NAME=kafka_2.13-3.9.2
 
 COPY core/build/distributions/$DISTRO_NAME.tgz /
 
@@ -65,45 +56,36 @@ COPY core/build/distributions/$DISTRO_NAME.tgz /
 # We assume appuser UID for standard Kubernetes, and an arbitrary UID + root group (0)
 # for OpenShift. Thus, grant both of those ownership here.
 RUN set -eux ; \
-    # 1. Add Alpine Edge repositories
-    echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories; \
-    echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories; \
-    # 2. Update and upgrade apk-tools
-    apk update ; \
-    apk add --upgrade apk-tools; \
-    # 3. Force upgrade all OS packages to Edge versions (patches CVEs)
-    apk upgrade --available ; \
-    # 4. Install runtime dependencies
-    apk add --no-cache wget gcompat gpg gpg-agent procps bash su-exec; \
-    # 5. Continue with Kafka installation and configuration
-    mkdir opt/kafka; \
-    tar xfz $DISTRO_NAME.tgz -C /opt/kafka --strip-components 1; \
-    mkdir -p /var/lib/kafka/data /etc/kafka/secrets; \
-    mkdir -p /etc/kafka/docker /usr/logs /mnt/shared/config; \
-    adduser -h /home/appuser -D --shell /bin/bash appuser; \
+    # 1. Continue with Kafka installation and configuration
+    tar xfz /$DISTRO_NAME.tgz -C /opt/kafka --strip-components 1; \
     chown appuser:0 -R /usr/logs /opt/kafka /mnt/shared/config; \
     chown appuser:0 -R /var/lib/kafka /etc/kafka/secrets /etc/kafka; \
     chmod -R ug+w /etc/kafka /var/lib/kafka /etc/kafka/secrets /opt/kafka; \
     cp /opt/kafka/config/log4j.properties /etc/kafka/docker/log4j.properties; \
     cp /opt/kafka/config/tools-log4j.properties /etc/kafka/docker/tools-log4j.properties; \
-    rm $DISTRO_NAME.tgz; \
-    # 6. Cleanup (remove build-only tools)
-    apk del wget gpg gpg-agent; \
-    apk cache clean;
+    rm /$DISTRO_NAME.tgz;
 
-COPY --from=build-jsa kafka.jsa /opt/kafka/kafka.jsa
-COPY --from=build-jsa storage.jsa /opt/kafka/storage.jsa
-COPY --chown=appuser:0 docker/resources/common-scripts /etc/kafka/docker
+#####
+# Needed to support an adapted entrypoint in support of
+# backwared-compatible BLC installations that may have been referencing
+# a Confluent-based Kafka Image.
+#####    
+COPY --from=build-jsa /kafka.jsa /opt/kafka/kafka.jsa
+COPY --from=build-jsa /storage.jsa /opt/kafka/storage.jsa
+RUN mkdir -p /etc/kafka/docker
+COPY --chown=appuser:0 docker/resources/common-scripts/ /etc/kafka/docker/
+RUN chmod +x /etc/kafka/docker/*.sh
 COPY --chown=appuser:0 docker/jvm/launch /etc/kafka/docker/launch
 
 VOLUME ["/etc/kafka/secrets", "/var/lib/kafka/data", "/mnt/shared/config"]
 
 RUN /etc/kafka/docker/hosts.sh
 
-RUN mkdir /etc/confluent
-RUN mkdir /etc/confluent/docker
 COPY --chown=appuser:0 run.sh /etc/confluent/docker/run
 RUN chmod 755 /etc/confluent/docker/run
+
+# Important to set this to the kafka home
+WORKDIR /opt/kafka
 
 # For compatibility with standard Kubernetes, we explicitly switch to a non-root UID. OpenShift
 # will ignore these settings and run as an arbitrary UID in the root group.
