@@ -12,7 +12,7 @@ variable "BUILD_AND_LOAD_LOCAL_PLATFORM_ONLY" {
   default = false
 }
 
-# Whether the system should build the more secure, but amd64 only alpine linux version
+# Whether the system should build for a specific platform (e.g. linux/amd64 or linux/arm64)
 variable "LIMIT_PLATFORM" {
   default = "none"
 }

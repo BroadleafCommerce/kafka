@@ -165,8 +165,15 @@ allprojects {
           libs.nettyCodecHttp2,
           // be explicit about the reload4j version instead of relying on the transitive versions
           libs.reload4j,
-          libs.commonsLang
+          libs.commonsLang,
+          libs.plexusUtils,
+          libs.zookeeper,
+          libs.log4J,
+          libs.jacksonDatabind
         )
+        dependencySubstitution {
+          substitute module("commons-lang:commons-lang") using module(libs.commonsLang)
+        }
       }
     }
   }
@@ -1048,6 +1055,7 @@ project(':core') {
     testImplementation libs.junitJupiter
     testImplementation libs.slf4jReload4j
     testImplementation libs.caffeine
+    testImplementation libs.commonsLang
 
     testRuntimeOnly libs.junitPlatformLanucher
   }
