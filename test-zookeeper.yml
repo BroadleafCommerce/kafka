@@ -11,7 +11,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: repository.broadleafcommerce.com:5001/broadleaf/kafka:3.9.2-wolfi-1
+    image: repository.broadleafcommerce.com:5001/broadleaf/kafka:3.9.2-wolfi-2
     hostname: broker
     container_name: broker
     depends_on:
