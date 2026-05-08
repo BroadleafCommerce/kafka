@@ -17,7 +17,7 @@
 ###############################################################################
 
 # Stage 1: Build Java Shared Archive (JSA)
-FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-2 AS build-jsa
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-4 AS build-jsa
 
 USER root
 
@@ -76,7 +76,7 @@ RUN if [ -d /opt/cruise-control ]; then cp -r /opt/cruise-control/* /tmp/strimzi
 RUN find /tmp/strimzi-extracted -name "commons-lang-2*.jar" -delete
 
 # Stage 3: Main Kafka image build
-FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-2
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-4
 
 # exposed ports
 EXPOSE 9092
@@ -139,7 +139,22 @@ RUN mkdir -p ${KAFKA_HOME}/strimzi-scripts \
              ${KAFKA_HOME}/strimzi-kafka-libs \
              ${KAFKA_EXPORTER_HOME} \
              ${CRUISE_CONTROL_HOME} \
-             ${JMX_EXPORTER_HOME}
+             ${JMX_EXPORTER_HOME} \
+             ${KAFKA_HOME}/cluster-ca-certs \
+             ${KAFKA_HOME}/broker-certs \
+             ${KAFKA_HOME}/client-ca-certs \
+             ${KAFKA_HOME}/certificates \
+             ${KAFKA_HOME}/custom-config && \
+    chown -R appuser:0 ${KAFKA_HOME}/cluster-ca-certs \
+                       ${KAFKA_HOME}/broker-certs \
+                       ${KAFKA_HOME}/client-ca-certs \
+                       ${KAFKA_HOME}/certificates \
+                       ${KAFKA_HOME}/custom-config && \
+    chmod -R ug+w ${KAFKA_HOME}/cluster-ca-certs \
+                  ${KAFKA_HOME}/broker-certs \
+                  ${KAFKA_HOME}/client-ca-certs \
+                  ${KAFKA_HOME}/certificates \
+                  ${KAFKA_HOME}/custom-config
 
 # Copy Strimzi Kafka scripts
 COPY --from=strimzi-source-extractor --chown=appuser:0 /tmp/strimzi-extracted/scripts ${KAFKA_HOME}/strimzi-scripts
@@ -172,8 +187,9 @@ USER appuser
 #####
 # Adapted Entrypoint in order to support 
 # backwared-compatible BLC installations that may have been referencing
-# a Confluent-based Kafka Image. Note that this entrypoint is not used
-# when running this image via the Strimzi Operator as Strimzi
-# provides its own entrypoint. See https://github.com/strimzi/strimzi-kafka-operator
+# a Confluent-based Kafka Image. Note that we use ENTRYPOINT + CMD
+# to allow Kubernetes/Strimzi to override the command via 'args' 
+# while still utilizing 'tini' for signal handling.
 #####
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["/etc/confluent/docker/run"]
