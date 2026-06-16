@@ -17,7 +17,7 @@
 ###############################################################################
 
 # Stage 1: Build Java Shared Archive (JSA)
-FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-5 AS build-jsa
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-6 AS build-jsa
 
 USER root
 
@@ -76,7 +76,7 @@ RUN if [ -d /opt/cruise-control ]; then cp -r /opt/cruise-control/* /tmp/strimzi
 RUN find /tmp/strimzi-extracted -name "commons-lang-2*.jar" -delete
 
 # Stage 3: Main Kafka image build
-FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-5
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-6
 
 # exposed ports
 EXPOSE 9092
