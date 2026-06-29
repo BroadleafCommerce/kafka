@@ -171,6 +171,17 @@ allprojects {
           libs.log4J,
           libs.jacksonDatabind
         )
+        // Pin EVERY io.netty module (not just the few enumerated in force() above) to a single
+        // version. Otherwise transitively-introduced modules such as the netty-resolver-dns
+        // cluster (netty-resolver-dns, netty-codec-dns, netty-codec-socks, netty-handler-proxy)
+        // resolve to an older, potentially CVE-bearing version and end up mixed into the
+        // distribution alongside the forced 4.1.x jars.
+        eachDependency { details ->
+          if (details.requested.group == "io.netty") {
+            details.useVersion(versions.netty)
+            details.because("pin all netty modules to a single, CVE-free version")
+          }
+        }
         dependencySubstitution {
           substitute module("commons-lang:commons-lang") using module(libs.commonsLang)
         }
