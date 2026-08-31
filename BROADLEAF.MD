@@ -1,8 +1,8 @@
 # Update Steps
 
 - Update `build.gradle` and `dependencies.gradle` for correct remediation versions.
-- `./gradlew test` (Full test suite takes 4 hours!!)
-- At the time of this writing, `SocketServerTest` consistently fails - even without any changes. As a result, ignoring this particular test result.
+- `./gradlew test` (Optional. Full test suite takes 4 hours!!)
+   - At the time of this writing, `SocketServerTest` consistently fails - even without any changes. As a result, ignoring this particular test result.
 - `./gradlew clean releaseTarGz`
 - For local testing: `FULLY_QUALIFIED_MAIN_IMAGE_TAG=repository.broadleafcommerce.com:5001/broadleaf/kafka:3.9.2-wolfi-kraft8 BUILD_AND_LOAD_LOCAL_PLATFORM_ONLY=true docker buildx bake -f docker-bake.hcl`
 - For release: 
