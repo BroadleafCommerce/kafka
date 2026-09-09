@@ -17,7 +17,7 @@
 ###############################################################################
 
 # Stage 1: Build Java Shared Archive (JSA)
-FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-9 AS build-jsa
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-10 AS build-jsa
 
 USER root
 
@@ -35,7 +35,7 @@ WORKDIR /
 RUN /etc/kafka/docker/jsa_launch
 
 # Stage 2: Main Kafka image build
-FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-9
+FROM repository.broadleafcommerce.com:5001/broadleaf/kafka-kraft-base:wolfi-10
 
 # exposed ports
 EXPOSE 9092
